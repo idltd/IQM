@@ -1,11 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Internet Quality Monitor</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 </head>
+
 <body>
     <h1>Internet Quality Monitor</h1>
     <canvas id="speedChart"></canvas>
@@ -17,29 +20,40 @@
         fetch('/speedtests')
             .then(response => response.json())
             .then(data => {
+                console.log('Fetched data:', data);
+                if (data.length === 0) {
+                    console.log('No data returned from server');
+                    return;
+                }
+
                 const ctx = document.getElementById('speedChart').getContext('2d');
+                console.log('Chart context:', ctx);
+
+                const chartData = {
+                    labels: data.map(d => new Date(d.timestamp * 1000)),
+                    datasets: [
+                        {
+                            label: 'Download (Mbps)',
+                            data: data.map(d => ({ x: new Date(d.timestamp * 1000), y: d.download })),
+                            borderColor: 'blue',
+                        },
+                        {
+                            label: 'Upload (Mbps)',
+                            data: data.map(d => ({ x: new Date(d.timestamp * 1000), y: d.upload })),
+                            borderColor: 'green',
+                        },
+                        {
+                            label: 'Ping (ms)',
+                            data: data.map(d => ({ x: new Date(d.timestamp * 1000), y: d.ping })),
+                            borderColor: 'red',
+                        }
+                    ]
+                };
+                console.log('Prepared chart data:', chartData);
+
                 new Chart(ctx, {
                     type: 'line',
-                    data: {
-                        labels: data.map(d => new Date(d[0] * 1000).toLocaleString()),
-                        datasets: [
-                            {
-                                label: 'Download (Mbps)',
-                                data: data.map(d => d[1]),
-                                borderColor: 'blue',
-                            },
-                            {
-                                label: 'Upload (Mbps)',
-                                data: data.map(d => d[2]),
-                                borderColor: 'green',
-                            },
-                            {
-                                label: 'Ping (ms)',
-                                data: data.map(d => d[3]),
-                                borderColor: 'red',
-                            }
-                        ]
-                    },
+                    data: chartData,
                     options: {
                         responsive: true,
                         scales: {
@@ -52,8 +66,8 @@
                         }
                     }
                 });
-            });
-
+            })
+            .catch(error => console.error('Error creating chart:', error));
         // Fetch and display outages
         fetch('/outages')
             .then(response => response.json())
@@ -70,4 +84,5 @@
             });
     </script>
 </body>
+
 </html>
