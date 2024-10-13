@@ -7,6 +7,8 @@
     <title>Internet Quality Monitor</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 </head>
 
 <body>
@@ -20,47 +22,87 @@
         fetch('/speedtests')
             .then(response => response.json())
             .then(data => {
-                console.log('Fetched data:', data);
-                if (data.length === 0) {
-                    console.log('No data returned from server');
-                    return;
-                }
-
                 const ctx = document.getElementById('speedChart').getContext('2d');
-                console.log('Chart context:', ctx);
 
-                const chartData = {
-                    labels: data.map(d => new Date(d.timestamp * 1000)),
-                    datasets: [
-                        {
-                            label: 'Download (Mbps)',
-                            data: data.map(d => ({ x: new Date(d.timestamp * 1000), y: d.download })),
-                            borderColor: 'blue',
-                        },
-                        {
-                            label: 'Upload (Mbps)',
-                            data: data.map(d => ({ x: new Date(d.timestamp * 1000), y: d.upload })),
-                            borderColor: 'green',
-                        },
-                        {
-                            label: 'Ping (ms)',
-                            data: data.map(d => ({ x: new Date(d.timestamp * 1000), y: d.ping })),
-                            borderColor: 'red',
-                        }
-                    ]
-                };
-                console.log('Prepared chart data:', chartData);
+                // Sort data by timestamp (oldest first)
+                data.sort((a, b) => a.timestamp - b.timestamp);
+
+                // Convert timestamps to Date objects
+                const convertedData = data.map(d => ({
+                    timestamp: new Date(d.timestamp), // Remove * 1000 if timestamps are already in milliseconds
+                    download: d.download,
+                    upload: d.upload,
+                    ping: d.ping
+                }));
+
+                console.log('Converted data:', convertedData);
 
                 new Chart(ctx, {
                     type: 'line',
-                    data: chartData,
+                    data: {
+                        datasets: [
+                            {
+                                label: 'Download (Mbps)',
+                                data: convertedData.map(d => ({ x: d.timestamp, y: d.download })),
+                                borderColor: 'blue',
+                            },
+                            {
+                                label: 'Upload (Mbps)',
+                                data: convertedData.map(d => ({ x: d.timestamp, y: d.upload })),
+                                borderColor: 'green',
+                            },
+                            {
+                                label: 'Ping (ms)',
+                                data: convertedData.map(d => ({ x: d.timestamp, y: d.ping })),
+                                borderColor: 'red',
+                            }
+                        ]
+                    },
                     options: {
                         responsive: true,
                         scales: {
                             x: {
                                 type: 'time',
                                 time: {
-                                    unit: 'hour'
+                                    unit: 'minute',
+                                    displayFormats: {
+                                        minute: 'MMM d, HH:mm'
+                                    }
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Date/Time'
+                                },
+                                ticks: {
+                                    source: 'auto',
+                                    autoSkip: true,
+                                    maxRotation: 0,
+                                    major: {
+                                        enabled: true
+                                    },
+                                    font: function (context) {
+                                        if (context.tick && context.tick.major) {
+                                            return {
+                                                weight: 'bold'
+                                            };
+                                        }
+                                    }
+                                }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Speed (Mbps) / Ping (ms)'
+                                }
+                            }
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    title: function (context) {
+                                        return new Date(context[0].parsed.x).toLocaleString();
+                                    }
                                 }
                             }
                         }
@@ -68,7 +110,6 @@
                 });
             })
             .catch(error => console.error('Error creating chart:', error));
-        // Fetch and display outages
         fetch('/outages')
             .then(response => response.json())
             .then(data => {
