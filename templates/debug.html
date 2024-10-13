@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug - Internet Quality Monitor</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Debug Information</h1>
+    <h2>Application Status</h2>
+    <ul>
+        <li>App Running: {{ status.app_running }}</li>
+        <li>Scheduler Running: {{ status.scheduler_running }}</li>
+        <li>Test Mode: {{ status.test_mode }}</li>
+        <li>Database Status: {{ status.database_status }}</li>
+    </ul>
+
+    <h2>Last Speed Test</h2>
+    {% if status.last_speed_test %}
+    <ul>
+        <li>Timestamp: {{ status.last_speed_test.timestamp }}</li>
+        <li>Download: {{ status.last_speed_test.download }} Mbps</li>
+        <li>Upload: {{ status.last_speed_test.upload }} Mbps</li>
+        <li>Ping: {{ status.last_speed_test.ping }} ms</li>
+    </ul>
+    {% else %}
+    <p>No speed tests recorded yet.</p>
+    {% endif %}
+
+    <h2>Configuration</h2>
+    <ul>
+        {% for key, value in status.config.items() %}
+        <li>{{ key }}: {{ value }}</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Manual Tests</h2>
+    <button onclick="runSpeedTest()">Run Speed Test</button>
+    <button onclick="runPing()">Run Ping</button>
+    <button onclick="runTraceroute()">Run Traceroute</button>
+    <div id="testResults"></div>
+
+    <h2>Recent Logs</h2>
+    <pre id="logs"></pre>
+
+    <script>
+        function runSpeedTest() {
+            fetch('/manual_test', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('testResults').innerHTML = `Speed Test Result: ${data.success ? 'Success' : 'Failed'}`;
+                });
+        }
+
+        function runPing() {
+            fetch('/ping', { 
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ host: '{{ status.config.ping_target }}' }),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('testResults').innerHTML = `<pre>${data.result}</pre>`;
+                });
+        }
+
+        function runTraceroute() {
+            fetch('/traceroute', { 
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ host: '{{ status.config.ping_target }}' }),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('testResults').innerHTML = `<pre>${data.result}</pre>`;
+                });
+        }
+
+        function fetchLogs() {
+            fetch('/logs')
+                .then(response => response.json())
+                .then(data => {
+                    const logsElement = document.getElementById('logs');
+                    logsElement.innerHTML = data.map(log => `${new Date(log.timestamp * 1000).toISOString()} - ${log.level}: ${log.message}`).join('\n');
+                });
+        }
+
+        fetchLogs();
+        setInterval(fetchLogs, 30000);  // Refresh logs every 30 seconds
+    </script>
+</body>
+</html>
