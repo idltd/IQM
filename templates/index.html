@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Internet Quality Monitor</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Internet Quality Monitor</h1>
+    <canvas id="speedChart"></canvas>
+    <h2>Recent Outages</h2>
+    <ul id="outagesList"></ul>
+
+    <script>
+        // Fetch and display speed test data
+        fetch('/speedtests')
+            .then(response => response.json())
+            .then(data => {
+                const ctx = document.getElementById('speedChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.map(d => new Date(d[0] * 1000).toLocaleString()),
+                        datasets: [
+                            {
+                                label: 'Download (Mbps)',
+                                data: data.map(d => d[1]),
+                                borderColor: 'blue',
+                            },
+                            {
+                                label: 'Upload (Mbps)',
+                                data: data.map(d => d[2]),
+                                borderColor: 'green',
+                            },
+                            {
+                                label: 'Ping (ms)',
+                                data: data.map(d => d[3]),
+                                borderColor: 'red',
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    unit: 'hour'
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+
+        // Fetch and display outages
+        fetch('/outages')
+            .then(response => response.json())
+            .then(data => {
+                const outagesList = document.getElementById('outagesList');
+                data.forEach(outage => {
+                    const li = document.createElement('li');
+                    const start = new Date(outage[0] * 1000).toLocaleString();
+                    const end = new Date(outage[1] * 1000).toLocaleString();
+                    const duration = (outage[1] - outage[0]) / 60; // minutes
+                    li.textContent = `Outage from ${start} to ${end} (${duration.toFixed(2)} minutes)`;
+                    outagesList.appendChild(li);
+                });
+            });
+    </script>
+</body>
+</html>
