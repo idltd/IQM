@@ -1,3 +1,6 @@
+# TODO - WIP: Fix dates on the graph
+# TODO: Better scaling of graph
+
 import speedtest
 import time
 import logging
