@@ -4,3 +4,5 @@ An app that runs in a docker container - monitoring your internet connection, ke
 -- and also tracking outages.
 
 Mostly written by AI's from simple prompts.
+
+Work in progress - date formatting needs work...
